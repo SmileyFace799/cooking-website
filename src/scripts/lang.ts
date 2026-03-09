@@ -11,7 +11,7 @@ const lang = {
 		strRelSkills: "Related skills",
 		strRelProjects: "Related projects",
 		strRelEducation: "Related education",
-
+		
 		strMySkills: "My skills",
 		strProgLangs: "Programming languages",
 		strFrameworks: "Frameworks",
@@ -21,16 +21,16 @@ const lang = {
 		strNetworking: "Networking",
 		strDatabases: "Databases",
 		strFullStackDev: "Full-stack development",
-
+		
 		strMyProjects: "My projects",
 		strNote: "Note",
 		strNoGitHub: "GitHub wasn't used before September 2021",
 		strDependency: "Dependency",
 		strParentProject: "Parent project",
-
+		
 		strMyEducation: "My education",
 		strSemester: "semester",
-
+		
 		strAboutMe: "About me",
 		strChosenName: "Chosen name",
 		strLegalName: "Legal name",
@@ -42,7 +42,7 @@ const lang = {
 		strAddress: "Address",
 		strPhone: "Phone",
 		strEmail: "E-mail",
-
+		
 		// time stuff
 		monthJan: "January",
 		monthFeb: "February",
@@ -112,7 +112,7 @@ const lang = {
 		strRelSkills: "Relaterte ferdigheter",
 		strRelProjects: "Relaterte prosjekter",
 		strRelEducation: "Relatert utdanning",
-
+		
 		strMySkills: "Mine ferdigheter",
 		strProgLangs: "Programmingsspråk",
 		strFrameworks: "Rammeverk",
@@ -128,10 +128,10 @@ const lang = {
 		strNoGitHub: "GitHub ble ikke brukt før September 2021",
 		strDependency: "Avhengighet",
 		strParentProject: "Hovedprosjekt",
-
+		
 		strMyEducation: "Min utdanning",
 		strSemester: "semester",
-
+		
 		strAboutMe: "Om meg",
 		strChosenName: "Valgt navn",
 		strLegalName: "Juridisk navn",
@@ -143,7 +143,7 @@ const lang = {
 		strAddress: "Addresse",
 		strPhone: "Telefon",
 		strEmail: "E-post",
-
+		
 		// Time stuff
 		monthJan: "Januar",
 		monthFeb: "Februar",
@@ -213,7 +213,7 @@ const lang = {
 		strRelSkills: "Compétences connexes",
 		strRelProjects: "Projets connexes",
 		strRelEducation: "Éducation connexe",
-
+		
 		strMySkills: "Mes compétences",
 		strProgLangs: "Languages de programmation",
 		strFrameworks: "Frameworks",
@@ -223,16 +223,16 @@ const lang = {
 		strNetworking: "Réseautage",
 		strDatabases: "Bases de données",
 		strFullStackDev: "Développement full-stack",
-
+		
 		strMyProjects: "Mes projets",
 		strNote: "Note",
 		strNoGitHub: "GitHub n'était pas utilisé avant Septembre 2021",
 		strDependency: "Dépendences",
 		strParentProject: "Projet parent",
-
+		
 		strMyEducation: "Mon éducation",
 		strSemester: "semestre",
-
+		
 		strAboutMe: "À propos",
 		strChosenName: "Nom choisi",
 		strLegalName: "Nom légal",
@@ -245,7 +245,7 @@ const lang = {
 		strPhone: "Téléphone",
 		strEmail: "E-mail",
 		strPronouns: "Pronoms",
-
+		
 		// time stuff
 		monthJan: "Janvier",
 		monthFeb: "Février",
@@ -320,6 +320,12 @@ export function ALL_LANGS(): ValidLang[] {
 	return Object.keys(lang) as ValidLang[];
 }
 
+/**
+ * Fetches all common & localized confidential language keysets.
+ * 
+ * @param token The authorization token to use when fetching the language keysets
+ * @returns A promise that contains the confidential language keysets, if a valid token was proviced
+ */
 export async function FETCH_CONFIDENTIAL_LANG(token: string): Promise<void> {
 	const r = await fetch(GET_ENDPOINT("confidential"), {headers: {"X-API-key": token}});
 	const json = r.ok ? await r.json() : null;
@@ -342,6 +348,9 @@ export async function FETCH_CONFIDENTIAL_LANG(token: string): Promise<void> {
 	}
 }
 
+/**
+ * Clears all stored common & localized confidential language keysets.
+ */
 export function CLEAR_CONFIDENTIAL_LANG(): void {
 	for (const key in confidentialCommonLang) {
 		delete confidentialCommonLang[key];
@@ -353,16 +362,37 @@ export function CLEAR_CONFIDENTIAL_LANG(): void {
 	}
 }
 
+/**
+* Gets the first avaialable string from a provided list of possibly available language keysets.
+* 
+* @param key The key to get a string for
+* @param keySets A list of `[keySet, condition]` pairs, where the keySet is the actual keySet to get a string from,
+* 				 and the condition determines if the keyset should be available or not
+* @returns The string that matches the key in the first available keyset
+*/
+function getStr(key: string, keySets: [{[key: string]: string} | undefined, boolean][]): string {
+	let foundStr = undefined as string | undefined;
+	let i = 0;
+	while (!foundStr && i < keySets.length) {
+		let ks = keySets[i];
+		foundStr = ks[1] && ks[0] !== undefined ? ks[0][key] : undefined;
+		i++;
+	}
+	return foundStr ?? `{${key} (MISSING TRANSLATION)}`;
+}
+
+/**
+ * Gets the string assiciated with the key if available.
+ * 
+ * @param key The key to get a string for
+ * @returns The string assiciated with the key, based on current authentication.
+ * 			Returns "key {MISSING TRANSLATION}" if no string is available with the current level of authentication
+ */
 export function STR(key: string): string {
-	var keys = IS_AUTHENTICATED.value ? confidentialLang[CURRENT_LANG.value] : undefined; //lang[CURRENT_LANG.value] as {[key: string]: string} | undefined;
-	if (keys === undefined || keys[key] === undefined) {
-		keys = IS_AUTHENTICATED.value ? confidentialCommonLang : undefined;
-	}
-	if (keys === undefined || keys[key] === undefined) {
-		keys = lang[CURRENT_LANG.value];
-	}
-	if (keys === undefined || keys[key] === undefined) {
-		keys = commonLang;
-	}
-	return keys !== undefined && keys[key] !== undefined ? keys[key] : `{${key} (MISSING TRANSLATION)}`;
+	return getStr(key, [
+		[confidentialLang[CURRENT_LANG.value], IS_AUTHENTICATED.value],
+		[confidentialCommonLang, IS_AUTHENTICATED.value],
+		[lang[CURRENT_LANG.value], true],
+		[commonLang, true]
+	]);
 }
